@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動画から音声抽出</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@shadcn/ui@0.0.1/dist/shadcn-ui.min.css" rel="stylesheet">
+    <style>
+        .drop-zone {
+            border: 2px dashed #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .drop-zone:hover {
+            border-color: #3b82f6;
+            background-color: #f9fafb;
+        }
+        .drop-zone.dragover {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        /* ダークモードのスタイル */
+        [data-theme="dark"] {
+            background-color: #111827;
+            color: #ffffff;
+        }
+        [data-theme="dark"] .bg-white {
+            background-color: #1f2937;
+        }
+        [data-theme="dark"] .text-gray-700 {
+            color: #d1d5db;
+        }
+        [data-theme="dark"] .text-gray-600 {
+            color: #9ca3af;
+        }
+        [data-theme="dark"] .border {
+            border-color: #374151;
+        }
+        [data-theme="dark"] .bg-gray-200 {
+            background-color: #374151;
+        }
+        [data-theme="dark"] .bg-gray-50 {
+            background-color: #111827;
+        }
+        [data-theme="dark"] .drop-zone {
+            border-color: #374151;
+        }
+        [data-theme="dark"] .drop-zone:hover {
+            border-color: #60a5fa;
+            background-color: #1f2937;
+        }
+        [data-theme="dark"] .bg-blue-50 {
+            background-color: #1e3a8a;
+        }
+        [data-theme="dark"] .bg-red-100 {
+            background-color: #7f1d1d;
+            color: #fecaca;
+        }
+        [data-theme="dark"] .bg-green-100 {
+            background-color: #14532d;
+            color: #bbf7d0;
+        }
+        [data-theme="dark"] .bg-blue-100 {
+            background-color: #1e3a8a;
+            color: #bfdbfe;
+        }
+        [data-theme="dark"] #themeToggle {
+            background-color: #374151;
+            color: #ffffff;
+        }
+        [data-theme="dark"] #themeToggle:hover {
+            background-color: #4b5563;
+        }
+        [data-theme="dark"] .shadow-lg {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        [data-theme="dark"] .text-gray-400 {
+            color: #6b7280;
+        }
+        [data-theme="dark"] select {
+            background-color: #1f2937;
+            color: #ffffff;
+        }
+        [data-theme="dark"] input {
+            background-color: #1f2937;
+            color: #ffffff;
+        }
+        [data-theme="dark"] .bg-gray-50 {
+            background-color: #111827;
+        }
+        [data-theme="dark"] .bg-white {
+            background-color: #1f2937;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen transition-colors duration-300">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-end mb-4">
+            <button id="themeToggle" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                テーマ切り替え
+            </button>
+        </div>
+        
+        <div class="max-w-2xl mx-auto">
+            <div class="bg-white rounded-xl shadow-lg p-6 transition-colors duration-300">
+                <h1 class="text-2xl font-bold text-center mb-6">動画から音声抽出</h1>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">出力フォルダ</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="outputDir" class="flex-1 px-3 py-2 border rounded-lg bg-white" readonly>
+                            <button id="selectOutputDir" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                                フォルダを選択
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">出力形式</label>
+                        <select id="format" class="w-full px-3 py-2 border rounded-lg bg-white">
+                            <option value="mp3">MP3</option>
+                            <option value="wav">WAV</option>
+                            <option value="ogg">OGG</option>
+                        </select>
+                    </div>
+                    
+                    <div class="drop-zone" id="dropZone">
+                        <div class="space-y-2">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            <p class="text-gray-600">動画ファイルをドラッグ＆ドロップ<br>またはクリックして選択</p>
+                            <input type="file" id="fileInput" class="hidden" accept="video/*">
+                        </div>
+                    </div>
+                    
+                    <div id="progressBar" class="hidden">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="statusMessage" class="hidden p-4 rounded-lg"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const formatSelect = document.getElementById('format');
+            const progressBar = document.getElementById('progressBar');
+            const progressBarInner = progressBar.querySelector('.bg-blue-500');
+            const statusMessage = document.getElementById('statusMessage');
+            const themeToggle = document.getElementById('themeToggle');
+            const outputDir = document.getElementById('outputDir');
+            const selectOutputDir = document.getElementById('selectOutputDir');
+            
+            // テーマ切り替え
+            themeToggle.addEventListener('click', function() {
+                const currentTheme = document.body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                document.body.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                
+                // テーマ切り替えボタンのテキストを更新
+                themeToggle.textContent = newTheme === 'dark' ? 'ライトモード' : 'ダークモード';
+            });
+            
+            // 保存されたテーマを適用
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.body.setAttribute('data-theme', savedTheme);
+            themeToggle.textContent = savedTheme === 'dark' ? 'ライトモード' : 'ダークモード';
+            
+            // ドラッグ＆ドロップの処理
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+            
+            dropZone.addEventListener('dragleave', function() {
+                dropZone.classList.remove('dragover');
+            });
+            
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            });
+            
+            dropZone.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function() {
+                if (fileInput.files.length > 0) {
+                    handleFile(fileInput.files[0]);
+                }
+            });
+            
+            // 出力フォルダ選択
+            selectOutputDir.addEventListener('click', async function() {
+                try {
+                    const result = await window.electron.selectOutputDirectory();
+                    if (result) {
+                        outputDir.value = result;
+                    }
+                } catch (error) {
+                    console.error('フォルダ選択エラー:', error);
+                }
+            });
+            
+            function handleFile(file) {
+                if (!file.type.startsWith('video/')) {
+                    showStatus('動画ファイルを選択してください', 'error');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('format', formatSelect.value);
+                if (outputDir.value) {
+                    formData.append('output_dir', outputDir.value);
+                }
+                
+                progressBar.classList.remove('hidden');
+                statusMessage.classList.remove('hidden');
+                showStatus('変換中...', 'info');
+                
+                fetch('/convert', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || '変換に失敗しました');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        showStatus(data.message, 'success');
+                        
+                        if (data.file_data) {
+                            // ファイルデータをダウンロード
+                            const byteArray = new Uint8Array(data.file_data.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                            const blob = new Blob([byteArray], { type: 'application/octet-stream' });
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = data.file_name;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+                        }
+                        
+                        if (data.file_path) {
+                            showStatus(`ファイルを保存しました: ${data.file_path}`, 'success');
+                        }
+                    }
+                })
+                .catch(error => {
+                    showStatus(error.message, 'error');
+                })
+                .finally(() => {
+                    progressBar.classList.add('hidden');
+                });
+            }
+            
+            function showStatus(message, type) {
+                statusMessage.textContent = message;
+                statusMessage.className = `p-4 rounded-lg ${
+                    type === 'error' ? 'bg-red-100 text-red-700' :
+                    type === 'success' ? 'bg-green-100 text-green-700' :
+                    'bg-blue-100 text-blue-700'
+                }`;
+                statusMessage.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html> 
