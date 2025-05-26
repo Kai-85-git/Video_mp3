@@ -6,7 +6,7 @@
     <title>動画から音声抽出</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/@shadcn/ui@0.0.1/dist/shadcn-ui.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         .drop-zone {
             border: 2px dashed #e5e7eb;
@@ -70,6 +70,120 @@
             background-color: #1e3a8a;
             color: #bfdbfe;
         }
+        
+        /* アニメーション改善 */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* ホバー効果の改善 */
+        .button-hover {
+            transition: all 0.2s ease;
+            transform: translateY(0);
+        }
+        
+        .button-hover:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* ファイル情報の改善 */
+        .file-info-card {
+            border-left: 4px solid #3b82f6;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+        
+        [data-theme="dark"] .file-info-card {
+            border-left-color: #60a5fa;
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+        }
+        
+        /* レスポンシブデザイン */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .max-w-2xl {
+                max-width: 100%;
+            }
+            
+            .bg-white {
+                margin: 0.5rem;
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .drop-zone {
+                padding: 1.5rem;
+            }
+            
+            .drop-zone svg {
+                width: 2rem;
+                height: 2rem;
+            }
+            
+            .flex.gap-2 {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            #themeToggle {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+            }
+            
+            .file-info-card .flex {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+            
+            #removeFile {
+                align-self: flex-end;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 0.5rem;
+            }
+            
+            .bg-white {
+                margin: 0.25rem;
+                padding: 0.75rem;
+            }
+            
+            .drop-zone {
+                padding: 1rem;
+            }
+            
+            .drop-zone p {
+                font-size: 0.875rem;
+            }
+            
+            .py-3 {
+                padding-top: 0.75rem;
+                padding-bottom: 0.75rem;
+            }
+        }
         [data-theme="dark"] #themeToggle {
             background-color: #374151;
             color: #ffffff;
@@ -102,22 +216,25 @@
 <body class="bg-gray-50 min-h-screen transition-colors duration-300">
     <div class="container mx-auto px-4 py-8">
         <div class="flex justify-end mb-4">
-            <button id="themeToggle" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                テーマ切り替え
+            <button id="themeToggle" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 button-hover flex items-center gap-2">
+                <span class="material-icons text-sm" id="themeIcon">dark_mode</span>
+                <span id="themeText">ダークモード</span>
             </button>
         </div>
         
         <div class="max-w-2xl mx-auto">
-            <div class="bg-white rounded-xl shadow-lg p-6 transition-colors duration-300">
+            <div class="bg-white rounded-xl shadow-lg p-6 transition-colors duration-300 responsive-container">
                 <h1 class="text-2xl font-bold text-center mb-6">動画から音声抽出</h1>
                 
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">出力フォルダ</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="outputDir" class="flex-1 px-3 py-2 border rounded-lg bg-white" readonly>
-                            <button id="selectOutputDir" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                                フォルダを選択
+                        <div class="flex gap-2 responsive-flex">
+                            <input type="text" id="outputDir" class="flex-1 px-3 py-2 border rounded-lg bg-white" readonly placeholder="デフォルト（ダウンロード）">
+                            <button id="selectOutputDir" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 button-hover flex items-center gap-2 whitespace-nowrap">
+                                <span class="material-icons text-sm">folder_open</span>
+                                <span class="hidden sm:inline">フォルダを選択</span>
+                                <span class="sm:hidden">選択</span>
                             </button>
                         </div>
                     </div>
@@ -136,22 +253,42 @@
                             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                             </svg>
-                            <p class="text-gray-600">動画ファイルをドラッグ＆ドロップ<br>またはクリックして選択</p>
+                            <p class="text-gray-600">動画ファイルをドラッグ＆ドロップ<br>またはクリックして選択<br><span class="text-sm text-gray-500">（最大50MB）</span></p>
                             <input type="file" id="fileInput" class="hidden" accept="video/*">
                         </div>
                     </div>
 
-                    <div id="selectedFile" class="hidden p-4 bg-gray-50 rounded-lg">
-                        <p class="text-gray-700">選択されたファイル: <span id="fileName" class="font-medium"></span></p>
+                    <div id="selectedFile" class="hidden p-4 bg-gray-50 rounded-lg file-info-card fade-in">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="material-icons text-blue-500">video_file</span>
+                                <div>
+                                    <p class="text-gray-700 font-medium">選択されたファイル</p>
+                                    <p id="fileName" class="text-sm text-gray-600"></p>
+                                </div>
+                            </div>
+                            <button id="removeFile" class="text-red-500 hover:text-red-700 p-1 rounded">
+                                <span class="material-icons text-sm">close</span>
+                            </button>
+                        </div>
                     </div>
                     
-                    <button id="convertButton" class="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors hidden">
-                        音声抽出を開始
+                    <button id="convertButton" class="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 button-hover hidden">
+                        <span class="flex items-center justify-center gap-2">
+                            <span class="material-icons text-sm">audiotrack</span>
+                            音声抽出を開始
+                        </span>
                     </button>
                     
-                    <div id="progressBar" class="hidden">
-                        <div class="w-full bg-gray-200 rounded-full h-2.5">
-                            <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    <div id="progressContainer" class="hidden space-y-2">
+                        <div class="flex justify-between text-sm text-gray-600">
+                            <span>変換進行中...</span>
+                            <span id="progressPercentage">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div id="progressBar" class="bg-blue-500 h-3 rounded-full transition-all duration-300 relative" style="width: 0%">
+                                <div class="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full animate-pulse"></div>
+                            </div>
                         </div>
                     </div>
                     
@@ -166,8 +303,9 @@
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('fileInput');
             const formatSelect = document.getElementById('format');
+            const progressContainer = document.getElementById('progressContainer');
             const progressBar = document.getElementById('progressBar');
-            const progressBarInner = progressBar.querySelector('.bg-blue-500');
+            const progressPercentage = document.getElementById('progressPercentage');
             const statusMessage = document.getElementById('statusMessage');
             const themeToggle = document.getElementById('themeToggle');
             const outputDir = document.getElementById('outputDir');
@@ -228,17 +366,29 @@
                     return;
                 }
                 
-                // ファイルサイズのチェック（40MB）
-                if (file.size > 40 * 1024 * 1024) {
-                    showStatus('ファイルサイズが大きすぎます。40MB以下のファイルを選択してください。', 'error');
+                // ファイルサイズのチェック（50MB）
+                const maxSize = 50 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                    showStatus(`ファイルサイズが大きすぎます（${sizeMB}MB）。50MB以下のファイルを選択してください。`, 'error');
                     return;
                 }
                 
                 selectedFileData = file;
-                fileName.textContent = file.name;
+                const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                fileName.textContent = `${file.name} (${sizeMB}MB)`;
                 selectedFile.classList.remove('hidden');
                 convertButton.classList.remove('hidden');
             }
+            
+            // ファイル削除ボタンのイベントリスナー
+            removeFile.addEventListener('click', function() {
+                selectedFileData = null;
+                fileInput.value = '';
+                selectedFile.classList.add('hidden');
+                convertButton.classList.add('hidden');
+                showStatus('ファイルの選択を解除しました', 'info');
+            });
             
             // 出力フォルダ選択
             selectOutputDir.addEventListener('click', async function() {
@@ -272,9 +422,11 @@
                     return;
                 }
                 
-                // ファイルサイズのチェック（40MB）
-                if (selectedFileData.size > 40 * 1024 * 1024) {
-                    showStatus('ファイルサイズが大きすぎます。40MB以下のファイルを選択してください。', 'error');
+                // ファイルサイズのチェック（50MB）
+                const maxSize = 50 * 1024 * 1024;
+                if (selectedFileData.size > maxSize) {
+                    const sizeMB = (selectedFileData.size / (1024 * 1024)).toFixed(1);
+                    showStatus(`ファイルサイズが大きすぎます（${sizeMB}MB）。50MB以下のファイルを選択してください。`, 'error');
                     return;
                 }
                 
@@ -285,7 +437,16 @@
                     formData.append('output_dir', outputDir.value);
                 }
                 
-                progressBar.classList.remove('hidden');
+                progressContainer.classList.remove('hidden');
+                
+                // プログレスバーのアニメーション
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 15;
+                    if (progress > 90) progress = 90;
+                    progressBar.style.width = progress + '%';
+                    progressPercentage.textContent = Math.round(progress) + '%';
+                }, 200);
                 statusMessage.classList.remove('hidden');
                 showStatus('変換中...', 'info');
                 
@@ -295,14 +456,19 @@
                         body: formData
                     });
                     
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (e) {
+                        throw new Error('サーバーからの応答が不正です');
+                    }
+                    
                     if (!response.ok) {
-                        const data = await response.json();
                         throw new Error(data.error || '変換に失敗しました');
                     }
                     
-                    const data = await response.json();
                     if (data.success) {
-                        showStatus(data.message, 'success');
+                        let successMessage = data.message;
                         
                         if (data.file_data) {
                             // ファイルデータをダウンロード
@@ -316,27 +482,64 @@
                             a.click();
                             window.URL.revokeObjectURL(url);
                             document.body.removeChild(a);
+                            
+                            successMessage += ` - ${data.file_name}をダウンロードしました`;
                         }
                         
                         if (data.file_path) {
-                            showStatus(`ファイルを保存しました: ${data.file_path}`, 'success');
+                            successMessage += ` - ファイルパス: ${data.file_path}`;
                         }
+                        
+                        showStatus(successMessage, 'success');
+                        
+                        // 変換完了後にファイル選択をリセット
+                        setTimeout(() => {
+                            selectedFileData = null;
+                            fileInput.value = '';
+                            selectedFile.classList.add('hidden');
+                            convertButton.classList.add('hidden');
+                        }, 2000);
                     }
                 } catch (error) {
                     showStatus(error.message, 'error');
                 } finally {
-                    progressBar.classList.add('hidden');
+                    if (typeof progressInterval !== 'undefined') {
+                        clearInterval(progressInterval);
+                    }
+                    progressBar.style.width = '100%';
+                    progressPercentage.textContent = '100%';
+                    setTimeout(() => {
+                        progressContainer.classList.add('hidden');
+                        progressBar.style.width = '0%';
+                        progressPercentage.textContent = '0%';
+                    }, 1000);
                 }
             });
             
             function showStatus(message, type) {
-                statusMessage.textContent = message;
-                statusMessage.className = `p-4 rounded-lg ${
+                statusMessage.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="material-icons text-sm">${
+                            type === 'error' ? 'error' :
+                            type === 'success' ? 'check_circle' :
+                            'info'
+                        }</span>
+                        <span>${message}</span>
+                    </div>
+                `;
+                statusMessage.className = `p-4 rounded-lg fade-in ${
                     type === 'error' ? 'bg-red-100 text-red-700' :
                     type === 'success' ? 'bg-green-100 text-green-700' :
                     'bg-blue-100 text-blue-700'
                 }`;
                 statusMessage.classList.remove('hidden');
+                
+                // 成功メッセージは3秒後に自動で非表示
+                if (type === 'success') {
+                    setTimeout(() => {
+                        statusMessage.classList.add('hidden');
+                    }, 3000);
+                }
             }
         });
     </script>
