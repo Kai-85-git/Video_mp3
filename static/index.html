@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>動画から音声抽出</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@shadcn/ui@0.0.1/dist/shadcn-ui.min.css" rel="stylesheet">
     <style>
@@ -139,6 +140,14 @@
                             <input type="file" id="fileInput" class="hidden" accept="video/*">
                         </div>
                     </div>
+
+                    <div id="selectedFile" class="hidden p-4 bg-gray-50 rounded-lg">
+                        <p class="text-gray-700">選択されたファイル: <span id="fileName" class="font-medium"></span></p>
+                    </div>
+                    
+                    <button id="convertButton" class="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors hidden">
+                        音声抽出を開始
+                    </button>
                     
                     <div id="progressBar" class="hidden">
                         <div class="w-full bg-gray-200 rounded-full h-2.5">
@@ -163,6 +172,11 @@
             const themeToggle = document.getElementById('themeToggle');
             const outputDir = document.getElementById('outputDir');
             const selectOutputDir = document.getElementById('selectOutputDir');
+            const convertButton = document.getElementById('convertButton');
+            const selectedFile = document.getElementById('selectedFile');
+            const fileName = document.getElementById('fileName');
+            
+            let selectedFileData = null;
             
             // テーマ切り替え
             themeToggle.addEventListener('click', function() {
@@ -171,7 +185,6 @@
                 document.body.setAttribute('data-theme', newTheme);
                 localStorage.setItem('theme', newTheme);
                 
-                // テーマ切り替えボタンのテキストを更新
                 themeToggle.textContent = newTheme === 'dark' ? 'ライトモード' : 'ダークモード';
             });
             
@@ -195,7 +208,7 @@
                 dropZone.classList.remove('dragover');
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
-                    handleFile(files[0]);
+                    handleFileSelection(files[0]);
                 }
             });
             
@@ -205,30 +218,68 @@
             
             fileInput.addEventListener('change', function() {
                 if (fileInput.files.length > 0) {
-                    handleFile(fileInput.files[0]);
+                    handleFileSelection(fileInput.files[0]);
                 }
             });
             
-            // 出力フォルダ選択
-            selectOutputDir.addEventListener('click', async function() {
-                try {
-                    const result = await window.electron.selectOutputDirectory();
-                    if (result) {
-                        outputDir.value = result;
-                    }
-                } catch (error) {
-                    console.error('フォルダ選択エラー:', error);
-                }
-            });
-            
-            function handleFile(file) {
+            function handleFileSelection(file) {
                 if (!file.type.startsWith('video/')) {
                     showStatus('動画ファイルを選択してください', 'error');
                     return;
                 }
                 
+                // ファイルサイズのチェック（40MB）
+                if (file.size > 40 * 1024 * 1024) {
+                    showStatus('ファイルサイズが大きすぎます。40MB以下のファイルを選択してください。', 'error');
+                    return;
+                }
+                
+                selectedFileData = file;
+                fileName.textContent = file.name;
+                selectedFile.classList.remove('hidden');
+                convertButton.classList.remove('hidden');
+            }
+            
+            // 出力フォルダ選択
+            selectOutputDir.addEventListener('click', async function() {
+                try {
+                    // フォルダ選択ダイアログを表示
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.webkitdirectory = true;
+                    input.directory = true;
+                    
+                    input.onchange = function(e) {
+                        if (e.target.files && e.target.files.length > 0) {
+                            const path = e.target.files[0].webkitRelativePath;
+                            const folder = path.split('/')[0];
+                            outputDir.value = folder;
+                            showStatus(`出力フォルダを選択しました: ${folder}`, 'success');
+                        }
+                    };
+                    
+                    input.click();
+                } catch (error) {
+                    console.error('フォルダ選択エラー:', error);
+                    showStatus('フォルダの選択に失敗しました', 'error');
+                }
+            });
+            
+            // 変換ボタンの処理
+            convertButton.addEventListener('click', async function() {
+                if (!selectedFileData) {
+                    showStatus('ファイルが選択されていません', 'error');
+                    return;
+                }
+                
+                // ファイルサイズのチェック（40MB）
+                if (selectedFileData.size > 40 * 1024 * 1024) {
+                    showStatus('ファイルサイズが大きすぎます。40MB以下のファイルを選択してください。', 'error');
+                    return;
+                }
+                
                 const formData = new FormData();
-                formData.append('file', file);
+                formData.append('file', selectedFileData);
                 formData.append('format', formatSelect.value);
                 if (outputDir.value) {
                     formData.append('output_dir', outputDir.value);
@@ -238,19 +289,18 @@
                 statusMessage.classList.remove('hidden');
                 showStatus('変換中...', 'info');
                 
-                fetch('/convert', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
+                try {
+                    const response = await fetch('/convert', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
                     if (!response.ok) {
-                        return response.json().then(data => {
-                            throw new Error(data.error || '変換に失敗しました');
-                        });
+                        const data = await response.json();
+                        throw new Error(data.error || '変換に失敗しました');
                     }
-                    return response.json();
-                })
-                .then(data => {
+                    
+                    const data = await response.json();
                     if (data.success) {
                         showStatus(data.message, 'success');
                         
@@ -272,14 +322,12 @@
                             showStatus(`ファイルを保存しました: ${data.file_path}`, 'success');
                         }
                     }
-                })
-                .catch(error => {
+                } catch (error) {
                     showStatus(error.message, 'error');
-                })
-                .finally(() => {
+                } finally {
                     progressBar.classList.add('hidden');
-                });
-            }
+                }
+            });
             
             function showStatus(message, type) {
                 statusMessage.textContent = message;

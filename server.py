@@ -6,6 +6,7 @@ from moviepy.editor import VideoFileClip
 import shutil
 import json
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import RequestEntityTooLarge
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
@@ -13,7 +14,7 @@ CORS(app)
 # 一時ディレクトリの設定
 UPLOAD_FOLDER = tempfile.gettempdir()
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB
+app.config['MAX_CONTENT_LENGTH'] = 40 * 1024 * 1024  # 40MB（Vercelの制限を考慮）
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'mp4', 'avi', 'mov', 'mkv'}
@@ -35,7 +36,16 @@ def convert_video():
         if not allowed_file(file.filename):
             return jsonify({'success': False, 'error': 'サポートされていないファイル形式です'}), 400
         
+        # ファイルサイズのチェック
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        
+        if file_size > 40 * 1024 * 1024:  # 40MB
+            return jsonify({'success': False, 'error': 'ファイルサイズが大きすぎます。40MB以下のファイルを選択してください。'}), 413
+        
         format = request.form.get('format', 'mp3')
+        output_dir = request.form.get('output_dir', '')
         
         # 安全なファイル名を生成
         safe_filename = secure_filename(file.filename)
@@ -52,7 +62,7 @@ def convert_video():
             
             # 出力ファイル名を生成
             output_filename = os.path.splitext(safe_filename)[0] + '.' + format
-            output_path = os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
+            output_path = os.path.join(output_dir, output_filename) if output_dir else os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
             
             # 音声を保存
             audio.write_audiofile(output_path)
@@ -67,13 +77,15 @@ def convert_video():
             
             # 一時ファイルを削除
             os.remove(temp_video_path)
-            os.remove(output_path)
+            if not output_dir:
+                os.remove(output_path)
             
             response = {
                 'success': True,
                 'message': '変換が完了しました',
                 'file_name': output_filename,
-                'file_data': file_data
+                'file_data': file_data,
+                'file_path': output_path if output_dir else None
             }
             
             return jsonify(response)
@@ -86,6 +98,8 @@ def convert_video():
                 os.remove(output_path)
             return jsonify({'success': False, 'error': str(e)}), 500
             
+    except RequestEntityTooLarge:
+        return jsonify({'success': False, 'error': 'ファイルサイズが大きすぎます。40MB以下のファイルを選択してください。'}), 413
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -98,6 +112,10 @@ def api_convert():
 @app.errorhandler(404)
 def not_found_error(error):
     return jsonify({'success': False, 'error': 'Not Found'}), 404
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({'success': False, 'error': 'ファイルサイズが大きすぎます。40MB以下のファイルを選択してください。'}), 413
 
 @app.errorhandler(500)
 def internal_error(error):
